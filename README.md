@@ -60,3 +60,14 @@ __Configuration Options__
 - _`http_proxy.address`_: The IP address on which Styx's HTTP proxy will listen. 0.0.0.0 listens on all available interfaces.
 - _`admin.port`_: The port on which Styx's administration interface will listen.
 - _`admin.address`_: The IP address on which Styx's administration interface will listen. 0.0.0.0 listens on all available interfaces.
+
+
+## Usage
+Once Styx is running, it will begin listening on the configured ports for the HTTP proxy and the administration interface. Incoming requests to the HTTP proxy will be intercepted, the Cerberus token (if present) will be verified, and the defined routing and permission rules will be applied.
+
+## Example Request Flow:
+1. A client sends a request to Styx with a Cerberus token in the api-token header.
+2. Styx extracts the token and sends it to the configured auth_url for verification.
+3. The external authentication service validates the token and returns user, role, and permission information.
+4. Styx uses this information to determine if the request has the necessary permissions to access the requested route.
+5. If authorization is successful, Styx routes the request to the appropriate backend service. If it fails, access is denied.
