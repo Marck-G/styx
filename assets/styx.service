@@ -1,0 +1,38 @@
+[Unit]
+Description=Styx
+After=network.target
+
+[Service]
+# Usuario de sistema sin privilegios
+User=styx
+Group=styx
+
+# Ruta absoluta al ejecutable
+ExecStart=/usr/local/bin/gateway
+
+# Variables de entorno (opcional, por si quieres configurar alguna ruta)
+Environment=
+
+# Reinicio automático en caso de fallo
+Restart=on-failure
+RestartSec=5
+
+# Límite de recursos (opcional, pero recomendable)
+LimitNOFILE=65535
+
+# Directorio de logs (gestión systemd)
+LogsDirectory=styx
+LogsDirectoryMode=0755
+
+# Archivos de log estarán en: /var/log/gateway/
+
+# Seguridad básica
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+[Install]
+WantedBy=multi-user.target
