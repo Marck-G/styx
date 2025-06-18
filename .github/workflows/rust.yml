@@ -1,0 +1,120 @@
+name: Rust
+
+on:
+  push:
+    tags:
+      - 'release/*'
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
+
+    - name: Cache Cargo dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+
+    - name: Build project
+      run: cargo build --release
+
+    - name: List generated files (for debugging)
+      run: ls -R target/release/
+
+    - name: Current folder
+      run: pwd
+
+    - name: Get version from tag
+      id: get_version
+      run: |
+        TAG_REF="${GITHUB_REF}"
+        # Extrae la parte de la etiqueta (ej. release/1.0.0)
+        TAG_NAME="${TAG_REF#refs/tags/}"
+        # Extrae solo la versión (ej. 1.0.0)
+        VERSION="${TAG_NAME#release/}"
+        echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+    - name: Upload artifact (Linux)
+      if: runner.os == 'Linux'
+      uses: actions/upload-artifact@v4
+      with:
+        name: cerberus-linux
+        path: |
+          ./target/release/styx
+          ./target/release/libstyx.so
+
+    # - name: Upload artifact (macOS)
+    #   if: runner.os == 'macOS'
+    #   uses: actions/upload-artifact@v4
+    #   with:
+    #     name: styx-macos
+    #     path: |
+    #       target/release/styx.app # Reemplaza con el nombre de tu ejecutable
+    #       target/release/libstyx.dylib # Reemplaza con el nombre de tu librería .dylib
+
+    - name: Upload artifact (Windows)
+      if: runner.os == 'Windows'
+      uses: actions/upload-artifact@v4
+      with:
+        name: styx-windows
+        path: |
+          ./target/release/styx.exe 
+          ./target/release/styx.dll 
+
+  create-release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/release')
+
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: List downloaded artifacts
+      run: ls -R artifacts
+
+    - name: Get tag name
+      id: get_tag
+      run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.get_tag.outputs.TAG }}
+        name: Release ${{ steps.get_version.outputs.VERSION }}
+        body: |
+          🎉 ¡Nueva versión disponible ${{ steps.get_version.outputs.VERSION }}! 🎉
+
+          Aquí están los binarios y librerías para diferentes sistemas operativos:
+        files: |
+          artifacts/styx-linux/styx
+          artifacts/styx-windows/styx.exe
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
