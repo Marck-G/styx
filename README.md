@@ -1,5 +1,10 @@
 # Styx: Custom API Gateway for Cerberus Tokens
 
+![](https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/Flag_of_Ecuador.svg/20px-Flag_of_Ecuador.svg.png)
+![](https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Flag_of_Spain.svg/20px-Flag_of_Spain.svg.png)
+
+
+
 Styx is an API Gateway developed in Rust, specifically designed to work with Cerberus tokens. This project provides a robust and flexible solution for managing routes, roles, and granular permissions, all stored directly within the Cerberus tokens. Furthermore, Styx integrates with an external service for token verification and extraction, ensuring centralized and efficient access control.
 
 ## Key Features
@@ -9,6 +14,7 @@ Styx is an API Gateway developed in Rust, specifically designed to work with Cer
 - __External Token Verification Service__: Connects to a configurable external service for validating and extracting token information.
 - __Flexible Configuration__: Customize Styx's behavior through an easy-to-use configuration file.
 - __Comprehensive Logging__: Configurable logging options to monitor gateway traffic and events.
+- __Prometheus Metrics__: Configurable logging options to monitor gateway traffic and events.
 
 ## Project Structure
 

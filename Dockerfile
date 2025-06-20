@@ -28,7 +28,28 @@ COPY . .
 # Build the Rust application in release mode
 RUN cargo build --release
 
-# Stage 2: Create the final lightweight image for deployment
+# --- Stage 2: Build the React WebUI ---
+FROM node:20-alpine AS webui_builder 
+# Usamos una imagen de Node.js ligera para el frontend
+
+WORKDIR /app/webui 
+# El directorio de trabajo para tu frontend
+
+# Copia package.json y package-lock.json (o yarn.lock) para instalar dependencias primero
+COPY webui/package.json webui/package-lock.json ./
+
+# Instala las dependencias del frontend
+RUN npm install
+
+# Copia el resto del código fuente del frontend
+COPY webui/ .
+
+# Construye la aplicación React para producción
+# Esto generará los archivos estáticos en la carpeta 'dist' por defecto
+RUN npm run build
+
+
+# Stage 3: Create the final lightweight image for deployment
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y \
     pkg-config \
@@ -50,7 +71,9 @@ RUN mkdir -p /app/var/log /app/lib
 # Replace 'your_app_name' with the actual name of your executable
 # (usually the 'name' field in your Cargo.toml)
 COPY --from=builder /app/target/release/styx /app/styx
-
+# Copy the compiled WebUI static files from the webui_builder stage
+# Los archivos se copiarán a /app/webui_dist dentro del contenedor final
+COPY --from=webui_builder /app/webui/dist /app/http
 # Copy the config template and the entrypoint script
 COPY ./assets/entrypoint.sh /app/entrypoint.sh
 COPY ./assets/config.lua.template /app/config.lua.template

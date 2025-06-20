@@ -8,7 +8,7 @@ User=styx
 Group=styx
 
 # Ruta absoluta al ejecutable
-ExecStart=/usr/local/bin/gateway
+ExecStart=/etc/styx/styx
 
 # Variables de entorno (opcional, por si quieres configurar alguna ruta)
 Environment=

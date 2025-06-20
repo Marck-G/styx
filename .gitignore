@@ -3,3 +3,7 @@ lib
 .sqlx
 var
 logs
+node_modules
+http
+dist
+.banner
