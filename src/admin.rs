@@ -1,14 +1,17 @@
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
 use axum::body::Body;
 use axum::extract::Path;
-use axum::http::{Response, StatusCode};
+use axum::http::{Response, StatusCode, Method};
+use axum::routing::get_service;
 use axum::{
     response::Json,
     routing::{delete, get, post, put},
     Extension, Router,
 };
+use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use tracing::Span;
 
@@ -17,17 +20,21 @@ use crate::{
     db::{Database, Route},
     dto::routes_create::CreateRouteRequest,
 };
+use tower_http::services::ServeDir;
 
 fn on_response_fn<'r, 's>(response: &'r Response<Body>, latency: Duration, _span: &'s Span) {
     tracing::info!("Response: {} ({:?})", response.status(), latency);
 } 
 pub fn admin_router(db: Arc<Database>) -> Router {
+    let webui_dist_path = PathBuf::from("./http"); 
     Router::new()
         .route("/admin/routes", get(list_routes))
         .route("/admin/routes", post(create_route))
         .route("/admin/routes/{id}", put(update_route))
         .route("/admin/routes/{id}", delete(delete_route))
         .layer(Extension(db))
+        .layer(CorsLayer::very_permissive())
+       
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(|request: &axum::http::Request<Body>| {
@@ -39,6 +46,9 @@ pub fn admin_router(db: Arc<Database>) -> Router {
                 })
                 .on_response(on_response_fn),
         )
+         .fallback_service(get_service(ServeDir::new(webui_dist_path.clone()).append_index_html_on_directories(true).not_found_service(
+            ServeDir::new(PathBuf::from("./http/assets")).append_index_html_on_directories(true)
+        )))
 }
 
 pub async fn list_routes(

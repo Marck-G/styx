@@ -2,6 +2,8 @@ use std::{error::Error, net::{SocketAddr}, sync::Arc};
 
 use axum::{routing::get, serve, Router};
 use tokio::net::TcpListener;
+use axum::http::Method;
+use tower_http::cors::CorsLayer;
 
 use crate::{admin::admin_router, app_state::AppState, config::Config, db::Database, http_client::HttpClient, logger::Logger, metrics::Metrics, proxy_core::auth::AuthClient, telemetry::Telemetry};
 
@@ -32,6 +34,23 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let metrics = Arc::new(Metrics::new());
 
+    let cors_layer = CorsLayer::new()
+        // Permite cualquier origen. Para producción, cambia esto a .allow_origin(Any|YourDomainHere)
+        .allow_origin(tower_http::cors::Any)
+        // Permite los métodos HTTP comunes (GET, POST, PUT, DELETE, etc.)
+        .allow_methods([
+            Method::GET,
+            Method::POST,
+            Method::PUT,
+            Method::DELETE,
+            Method::PATCH,
+            Method::OPTIONS, // OPTIONS es importante para las peticiones preflight de CORS
+        ])
+        // Permite cualquier header. En producción, especifica solo los necesarios.
+        .allow_headers(tower_http::cors::Any);
+        // Si quieres permitir credenciales (cookies, headers de autorización)
+        // .allow_credentials(true);
+
     let proxy_app_state = AppState {
         db: db.clone(),
         client,
@@ -43,6 +62,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let proxy = Router::new().route("/prometheus/metrics", get(metrics::metrics_handler))
     .fallback(proxy::gateway_handler)
+    .layer(cors_layer)
     .with_state(proxy_app_state);
     let proxy_addr_str = format!("{}:{}", config.http_proxy.address.clone(), config.http_proxy.port.clone());
     let proxy_addr: SocketAddr = proxy_addr_str.parse()?;
