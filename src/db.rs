@@ -1,6 +1,6 @@
 use glob::Pattern;
 use serde::Serialize;
-use sqlx::sqlite::SqlitePoolOptions;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{query, query_as, Result, SqlitePool};
 #[derive(Debug, Clone, Serialize)]
 pub struct Route {
@@ -17,7 +17,7 @@ pub struct Database {
 
 impl Database {
     pub async fn new(path: String) -> Result<Self> {
-        let pool = SqlitePoolOptions::new().connect(&path).await?;
+        let pool = SqlitePoolOptions::new().connect_with(SqliteConnectOptions::new().create_if_missing(true).filename(&path)).await?;
         tracing::info!("Database loaded: {}", path);
 
         // creamos la tabla

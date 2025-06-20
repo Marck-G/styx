@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::FromStr, time::Instant};
+use std::{collections::HashMap, io::Read, str::FromStr, time::Instant};
 
 use axum::{
     body::{self, Body},
@@ -19,6 +19,7 @@ pub async fn gateway_handler(
     let path = req.uri().path().to_owned();
     let start = Instant::now();
     let method = Method::from_str(req.method().as_str()).unwrap();
+    let query = req.uri().query().unwrap_or_else(|| "");
     state.metrics
                     .request_counter.with_label_values(&[&method.clone().as_str(), &path.as_str()]);
     let route = match state.db.find_matching_route(&path, method.as_str()).await {
@@ -102,19 +103,28 @@ pub async fn gateway_handler(
 
     // Asegurarse de que `remaining_path` empiece con `/` si no está vacío
     let clean_remaining_path = if !remaining_path.is_empty() && !remaining_path.starts_with('/') {
-        format!("/{}", remaining_path)
+        format!("./{}?{}", remaining_path, query)
     } else {
-        remaining_path.to_string()
+        format!(".{}?{}",remaining_path, query)
     };
     
     // Parsear la target_url como una Url base
-    let target_base_url = match Url::parse(&route.target_url) {
+    let mut target_base_url = match Url::parse(&route.target_url) {
         Ok(url) => url,
         Err(e) => {
             tracing::error!("Error parsing target_url '{}': {:?}", route.target_url, e);
             return (StatusCode::INTERNAL_SERVER_ERROR, "Invalid target URL configured").into_response();
         }
     };
+    tracing::info!("Target Base: {}", target_base_url);
+    tracing::info!("Current Path: {}", clean_remaining_path);
+    // ensure it's `http://localhost:8080/v1/`.
+    if !target_base_url.path().ends_with('/') {
+        target_base_url.path_segments_mut()
+            .map_err(|_| ()) // Handle case where path is opaque
+            .unwrap()
+            .push(""); // Add a trailing slash
+    }
 
     // Unir el `remaining_path` usando `join` de la crate `url`
     // Esto maneja automáticamente las barras duplicadas y la final
@@ -125,7 +135,7 @@ pub async fn gateway_handler(
             return (StatusCode::INTERNAL_SERVER_ERROR, "Error building target URL").into_response();
         }
     };
-
+    
 
     // Extraer headers a HashMap<String, String>
     let mut headers_map: HashMap<String, String> = HashMap::new();
@@ -150,6 +160,7 @@ pub async fn gateway_handler(
             method.clone(),
             &target_url,
             Some(headers_map),
+            // query,
             Some(body_string),
         )
         .await
@@ -166,26 +177,44 @@ pub async fn gateway_handler(
     let status = resp.status();
     let mut builder = Response::builder().status(status);
 
+    // Copy headers from the `reqwest::Response` to the `axum::Response` builder
+    // You should filter out hop-by-hop headers that `axum` or `hyper` will manage
+    // automatically (e.g., Connection, Keep-Alive, Proxy-Authenticate, Proxy-Authorization,
+    // Te, Trailers, Transfer-Encoding, Upgrade).
     for (key, value) in resp.headers().iter() {
-        builder = builder.header(key, value);
+        if !key.as_str().eq_ignore_ascii_case("connection")
+            && !key.as_str().eq_ignore_ascii_case("keep-alive")
+            && !key.as_str().eq_ignore_ascii_case("proxy-authenticate")
+            && !key.as_str().eq_ignore_ascii_case("proxy-authorization")
+            && !key.as_str().eq_ignore_ascii_case("te")
+            && !key.as_str().eq_ignore_ascii_case("trailers")
+            && !key.as_str().eq_ignore_ascii_case("transfer-encoding")
+            && !key.as_str().eq_ignore_ascii_case("upgrade")
+            && !key.as_str().eq_ignore_ascii_case("content-length") // Axum will set this
+        {
+            builder = builder.header(key, value);
+        }
     }
+
 
     // Obtener body como bytes para pasarlo a hyper::Body
     let bytes = match resp.bytes().await {
-        Ok(b) => b,
+            Ok(b) => {
+        tracing::info!("Response: {} bytes", b.clone().len());                
+                b},
         Err(e) => {
             tracing::error!("Error leyendo body respuesta: {:?}", e);
             return (StatusCode::BAD_GATEWAY, "Error leyendo body respuesta").into_response();
         }
     };
 
-    let body = Body::from(bytes);
+    // let body = Body::from(bytes);
     let elapsed = start.elapsed().as_secs_f64();
     state.metrics
         .response_time_histogram
         .with_label_values(&[&method.clone().as_str(), &path.as_str()])
         .observe(elapsed);
-    return match builder.body(body) {
+    match builder.body(Body::from(bytes)) {
         Ok(response) => {
             let status = response.status();
             if status.is_success() {
@@ -199,7 +228,8 @@ pub async fn gateway_handler(
                     .with_label_values(&[method.clone().as_str(), &path])
                     .inc();
             }
-            response.into_response()
+            tracing::info!("Response: {:?}", response.status());
+           return response.into_response()
         }
         Err(e) => {
             tracing::error!("Error construyendo response: {:?}", e);

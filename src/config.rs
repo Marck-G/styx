@@ -10,6 +10,11 @@ pub struct HttpConf{
 }
 
 #[derive(Debug, Deserialize, Clone)]
+pub struct TargetConfig {
+    pub token_header: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
 pub struct Config{
     pub log_file_path: String,
     pub database_path: String,
@@ -22,6 +27,7 @@ pub struct Config{
     pub http_proxy: HttpConf,
     pub admin: HttpConf,
     pub token_header: String,
+    pub target: TargetConfig,
 }
 
 impl Config {
@@ -57,6 +63,10 @@ impl Config {
         let a_address: String = admin_table.get("address")?;
         let admin: HttpConf = HttpConf { timeout: 0u64, port: a_port, address: a_address };
 
+         let target_table: Table = globals.get("target")?;
+        let t_token_header: String = target_table.get("token_header")?;
+        let target = TargetConfig{token_header: t_token_header};
+
         Ok(Config {
             log_file_path,
             database_path,
@@ -68,7 +78,8 @@ impl Config {
             http_proxy: proxy,
             admin,
             auth_url,
-            token_header
+            token_header,
+            target
         })
     }
 }

@@ -7,7 +7,7 @@ config = {
     log_to_file = true,
     log_format_json = true,
     cache_TTL = 36000,
-    auth_url = "http://localhost:3000/v1/auth/check",
+    auth_url = "http://localhost:8082/v1/auth/check",
     token_header= "api-token"
 }
 http_proxy = {
@@ -19,4 +19,8 @@ http_proxy = {
 admin = {
     port = 3082,
     address = "0.0.0.0"
+}
+
+target = {
+    token_header = "X-AuthToken"
 }

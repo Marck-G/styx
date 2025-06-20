@@ -25,15 +25,20 @@ impl HttpClient {
         method: Method,
         url: &str,
         headers: Option<HashMap<String, String>>,
+        // query_params: Option<HashMap<String, String>>,
         body: Option<String>,
     ) -> Result<Response, reqwest::Error> {
         let mut req = self.client.request(method.clone(), url);
-
         if let Some(hdrs) = headers {
             for (key, value) in hdrs {
                 req = req.header(&key, &value);
             }
         }
+
+        // Añadir parámetros de query
+        // if let Some(q_params) = query_params {
+        //     req = req.query(&q_params); // Usa el método .query() de reqwest
+        // }
 
         if let Some(b) = body {
             req = req.body(b);

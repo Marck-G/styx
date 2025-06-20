@@ -65,15 +65,5 @@ async fn main() -> Result<(), Box<dyn Error>> {
     });
     let(_,_) = tokio::join!(gateway, admin);
     
-
-    
-    //     let _new_route_id = db.insert_route(
-    //     "/api/users",
-    //     "GET",
-    //     "http://backend.example.com/users",
-    //     Some("admin,user"),
-    //     None,
-    // ).await?;
-    // println!("Inserted new route.");
     Ok(())
 }

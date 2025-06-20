@@ -31,6 +31,7 @@ impl std::error::Error for AuthError {}
 pub struct AuthClient {
     client: Client,
     path: String,
+    conf: Arc<Config>
 }
 
 impl AuthClient {
@@ -42,15 +43,15 @@ impl AuthClient {
         AuthClient {
             client,
             path: config.auth_url.clone(),
+            conf: config
         }
     }
 
     pub async fn validate_token(&self, token: &str) -> Result<AuthResponse, AuthError> {
-        // let mut headers: HashMap<String, String> = HashMap::new();
-        // headers.insert("X-API-KEY", token);
         let response = self
             .client
             .get(self.path.as_str())
+            .header(self.conf.target.token_header.clone(), token)
             .bearer_auth(token)
             .send()
             .await
