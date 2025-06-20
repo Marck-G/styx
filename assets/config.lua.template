@@ -1,0 +1,26 @@
+config = {
+    log_file_path = ${LOG_FILE_PATH},
+    database_path = ${DATABASE_PATH},
+    some_option = ${SOME_OPTION},
+    log_level = ${LOG_LEVEL},
+    log_to_console = ${LOG_TO_CONSOLE},
+    log_to_file = ${LOG_TO_FILE},
+    log_format_json = ${LOG_FORMAT_JSON},
+    cache_TTL = ${CACHE_TTL},
+    auth_url = ${AUTH_URL},
+    token_header= ${TOKEN_HEADER}
+}
+http_proxy = {
+    port = ${HTTP_PROXY_PORT},
+    timeout = ${HTTP_PROXY_TIMEOUT},
+    address = ${HTTP_PROXY_ADDRESS}
+}
+
+admin = {
+    port = ${ADMIN_PORT},
+    address = ${ADMIN_ADDRESS}
+}
+
+target = {
+    token_header = ${TARGET_TOKEN_HEADER}
+}
