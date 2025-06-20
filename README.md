@@ -14,7 +14,7 @@ Styx is an API Gateway developed in Rust, specifically designed to work with Cer
 - __External Token Verification Service__: Connects to a configurable external service for validating and extracting token information.
 - __Flexible Configuration__: Customize Styx's behavior through an easy-to-use configuration file.
 - __Comprehensive Logging__: Configurable logging options to monitor gateway traffic and events.
-- __Prometheus Metrics__: Configurable logging options to monitor gateway traffic and events.
+- __Prometheus Metrics__: expose metrics for prometheus service in `/prometheus/metrics`.
 
 ## Project Structure
 
