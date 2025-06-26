@@ -102,12 +102,17 @@ pub async fn gateway_handler(
     };
 
     // Asegurarse de que `remaining_path` empiece con `/` si no está vacío
-    let clean_remaining_path = if !remaining_path.is_empty() && !remaining_path.starts_with('/') {
-        format!("./{}?{}", remaining_path, query)
+    let mut clean_remaining_path = if !remaining_path.is_empty() && !remaining_path.starts_with('/') {
+        format!("./{}", remaining_path)
     } else {
-        format!(".{}?{}",remaining_path, query)
+        format!(".{}",remaining_path)
     };
     
+    // append the query string
+    if !query.is_empty() {
+        clean_remaining_path = format!("{}?{}", clean_remaining_path, query);
+    }
+
     // Parsear la target_url como una Url base
     let mut target_base_url = match Url::parse(&route.target_url) {
         Ok(url) => url,
